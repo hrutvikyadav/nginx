@@ -159,3 +159,181 @@ $ sudo nginx -t
 # start service again
 $ sudo service nginx start
 ```
+
+---
+
+## Core concepts
+
+### Directives
+
+Everything inside conf file is directive
+
+- Simple Directives
+
+  Consist of directive name followed by space delimited parameter names, terminate with semicolon
+  `directive_name param1 param2;`
+- Block Directives
+
+  Same as simple directives, end with `{}` instead of `;`
+  Include additional instructions in `{}`
+  > Block directive capable of conataining other directives inside is called `context`
+  > Four `contexts` are
+  >
+  > 1. events {}\
+  > Describe/configure general `handling of requests` on a global level. Max 1 valid.
+  > 2. http {}\
+  > configure handling of `http, https requests`. Max 1 valid
+  > 3. server {}\
+  > configure specific `virtual servers` running on `single host`. Nested inside http context. Multiple valid.\
+  > __one `server context`__ = __one `virtual host`__
+  > 4. main\
+  > This is the `conf file` itself.
+  > Everything __outside above _three contexts_ is in main__
+
+When .conf file consists of multiple server contexts, `listen` directive is used to _determine which context/instance_ will _handle the incoming requests_
+
+```conf
+http {
+    server {
+        listen 80;
+        server_name nginx-handbook.test;
+
+        return 200 "hello from port 80!\n";
+    }
+
+
+    server {
+        listen 8080;
+        server_name nginx-handbook.test;
+
+        return 200 "hello from port 8080!\n";
+    }
+}
+```
+
+try sending requests to different ports
+
+```bash
+curl nginx-handbook.test:80
+# hello from port 80!
+
+curl nginx-handbook.test:8080
+# hello from port 8080!
+```
+
+Change server names
+
+```conf
+http {
+    server {
+        listen 80;
+        server_name library.test;
+
+        return 200 "your local library!\n";
+    }
+
+
+    server {
+        listen 80;
+        server_name librarian.library.test;
+
+        return 200 "welcome dear librarian!\n";
+    }
+}
+```
+
+Now different server instances are running with different servernames
+> Update `hosts` file to include the domain names
+
+`return` directive used to respond with valid response to user,\
+takes 2 parameters- status code and message to return
+
+### Serve static content
+
+- `/srv` dir in `root` holds site specific data served by system
+
+  cd into this dir and clone your repo
+
+  ```bash
+  $ cd /srv
+
+  $ sudo git clone your_repo_path
+  ```
+
+- Update .conf file with `root` directive and path to srv/site_content
+  > nginx looks for index.html to serve, as it is http server
+
+  ```conf
+  events {
+
+  }
+
+  http {
+
+      server {
+
+          listen 80;
+          server_name nginx-handbook.test;
+
+          root /srv/nginx-handbook-projects/static-demo;
+      }
+  }
+  ```
+
+  If we check by visiting browser, html is served correctly but css isn't\
+  confirm if css is served correctly by making request for the css file
+
+  ```bash
+  $ curl -I http://172.28.218.108/mini.min.css
+  HTTP/1.1 200 OK
+  Server: nginx/1.18.0 (Ubuntu)
+  Date: Fri, 03 Feb 2023 09:20:55 GMT
+  Content-Type: text/plain
+  Content-Length: 46887
+  Last-Modified: Fri, 03 Feb 2023 09:12:45 GMT
+  Connection: keep-alive
+  ETag: "63dcd00d-b727"
+  Accept-Ranges: bytes
+  ```
+
+  Here we can see the file is served as `text/plain` instead of `text/css`
+
+  Solve this by adding `types` directive to .conf file, and configure file types
+
+  ```conf
+  ...
+  http {
+  ...
+    types {
+      text/html html;
+      text/css css;
+    }
+  ...
+  }
+  ```
+
+  Try reloading, if faced with the _mime type error_, we can also `include` the `/etc/nginx/mime.types` file in .conf to resolve this
+
+  ```conf
+  events {
+  }
+  http {
+    include /etc/nginx/mime.types;
+    server {
+        listen 80;
+        server_name nginx-handbook.test;
+
+        root /srv/nginx-handbook-projects/static-demo;
+    }
+  }
+  ```
+
+### Location context
+
+### variables
+
+### redirects
+
+### rewrites
+
+### try_files directive
